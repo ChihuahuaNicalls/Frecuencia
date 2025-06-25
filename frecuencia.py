@@ -49,7 +49,6 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
             rango_str = f"[{int(limites_inferiores[i])} - {int(limites_superiores[i])})"
         rangos_variables.append(rango_str)
 
-    # Calcular frecuencias
 
     # Frecuencia Absoluta
     frecuencia_absoluta = []
@@ -79,7 +78,7 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
         'Hi': [f'{x:.4f}' for x in frecuencia_relativa_acumulada]
     })
 
-    # Generar graficos ORIGINALES
+    # Generar graficos
     plt.style.use('ggplot')
     plt.figure(figsize=(16, 12))
     bar_color = '#64A53D'
@@ -160,10 +159,10 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
             print(f"Mediana para datos agrupados: {mediana_agrupada:.2f}")
         else:
             print("No se pudo calcular la mediana agrupada (frecuencia absoluta de la clase de la mediana es cero).")
-            mediana_agrupada = np.nan # Asignar NaN si no se puede calcular
+            mediana_agrupada = np.nan
     else:
         print("No se encontró la clase de la mediana.")
-        mediana_agrupada = np.nan # Asignar NaN si no se puede calcular
+        mediana_agrupada = np.nan
 
     # Moda para datos agrupados
     max_freq = 0
@@ -179,29 +178,26 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
         moda_agrupada = moda_clases[0]
         print(f"Moda para datos agrupados: {moda_agrupada:.2f}")
     elif len(moda_clases) > 1:
-        moda_agrupada = moda_clases # Es una lista de modas
+        moda_agrupada = moda_clases
         print(f"Datos bimodales o multimodales. Modas: {[f'{m:.2f}' for m in moda_clases]}")
     else:
-        moda_agrupada = np.nan # Asignar NaN si no se encuentra
+        moda_agrupada = np.nan
         print("No se encontró una moda (todos los valores tienen la misma frecuencia o no hay datos).")
 
     # Calcular asimetría y curtosis de los datos originales
     coef_asimetria = skew(datos)
-    coef_kurtosis = kurtosis(datos) # Curtosis de Fisher (exceso de curtosis)
+    coef_kurtosis = kurtosis(datos)
 
     print(f"\nCoeficiente de Asimetría (Skewness): {coef_asimetria:.4f}")
     print(f"Coeficiente de Curtosis (Kurtosis): {coef_kurtosis:.4f}")
 
-    # --- Nuevo Gráfico para Medidas de Tendencia Central y Análisis de Distribución (copia del anterior) ---
+    #Gráfico para Medidas de Tendencia Central y Análisis de Distribucion
     plt.figure(figsize=(10, 6))
-    ax = plt.gca() # Get current axes
+    ax = plt.gca()
 
-    # Dibujar el histograma
-    # Asegúrate de que `bins_edges` tenga un elemento más que `limites_inferiores`
     bins_edges = np.array(limites_inferiores + [limites_superiores[-1]])
-    ax.hist(datos, bins=bins_edges, edgecolor='black', alpha=0.7, color=bar_color) # La imagen image_4cab63.png muestra el histograma de distribución de datos con las medidas de tendencia central.
+    ax.hist(datos, bins=bins_edges, edgecolor='black', alpha=0.7, color=bar_color)
     
-    # Marcar medidas de tendencia central en el histograma
     if not np.isnan(media_agrupada):
         ax.axvline(x=media_agrupada, color='red', linestyle='--', linewidth=2, label=f'Media: {media_agrupada:.2f}')
     if not np.isnan(mediana_agrupada):
@@ -227,7 +223,7 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
     else:
         ax.legend()
     
-    ax.set_title(f'Distribución de Datos con Medidas de Tendencia Central\nAsimetría: {coef_asimetria:.2f}, Kurtosis: {coef_kurtosis:.2f}')
+    ax.set_title(f'Distribución de Datos con Medidas de Tendencia Central\nAsimetría: {coef_asimetria:.2f}, Curtosis: {coef_kurtosis:.2f}')
     ax.set_xlabel('Valor')
     ax.set_ylabel('Frecuencia')
     ax.grid(axis='y', linestyle='--', alpha=0.7)
@@ -310,6 +306,88 @@ def generar_tabla_frecuencias_con_formulas_imagen(num_datos=60):
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.show()
 
+    # Medidas de Posicion
+    def calcular_cuantil_agrupado(k, C, total_datos, limites_inf, frec_abs, frec_abs_acum, amplitud):
+        posicion = (k * total_datos) / C
+        clase_cuantil_idx = -1
+        for i, Fa in enumerate(frec_abs_acum):
+            if Fa >= posicion:
+                clase_cuantil_idx = i
+                break
+        
+        if clase_cuantil_idx != -1:
+            L = limites_inf[clase_cuantil_idx]
+            f = frec_abs[clase_cuantil_idx]
+            Fa_ant = frec_abs_acum[clase_cuantil_idx - 1] if clase_cuantil_idx > 0 else 0
+            
+            if f != 0:
+                cuantil_valor = L + ((posicion - Fa_ant) / f) * amplitud
+                return cuantil_valor
+            else:
+                return np.nan
+        else:
+            return np.nan
+
+    # P10
+    p10 = calcular_cuantil_agrupado(10, 100, num_datos, limites_inferiores, frecuencia_absoluta, frecuencia_absoluta_acumulada, amplitud_intervalo)
+    print(f"\nDécimo Percentil (P10): {p10:.2f}" if not np.isnan(p10) else "\nDécimo Percentil (P10): No se pudo calcular")
+    # Q2
+    q2 = calcular_cuantil_agrupado(2, 4, num_datos, limites_inferiores, frecuencia_absoluta, frecuencia_absoluta_acumulada, amplitud_intervalo)
+    print(f"Segundo Cuartil (Q2): {q2:.2f}" if not np.isnan(q2) else "Segundo Cuartil (Q2): No se pudo calcular")
+    # K3
+    k3 = calcular_cuantil_agrupado(3, 5, num_datos, limites_inferiores, frecuencia_absoluta, frecuencia_absoluta_acumulada, amplitud_intervalo)
+    print(f"Tercer Quintil (K3): {k3:.2f}" if not np.isnan(k3) else "Tercer Quintil (K3): No se pudo calcular")
+    # D8
+    d8 = calcular_cuantil_agrupado(8, 10, num_datos, limites_inferiores, frecuencia_absoluta, frecuencia_absoluta_acumulada, amplitud_intervalo)
+    print(f"Octavo Decil (D8): {d8:.2f}" if not np.isnan(d8) else "Octavo Decil (D8): No se pudo calcular")
+
+    # Grafica de posiciones
+    plt.figure(figsize=(12, 7))
+    ax = plt.gca()
+    bins_edges = np.array(limites_inferiores + [limites_superiores[-1]])
+    ax.hist(datos, bins=bins_edges, edgecolor='black', alpha=0.7, color=bar_color, label='Histograma de Frecuencia')
+
+    # Marcar los cuantiles
+    if not np.isnan(p10):
+        ax.axvline(x=p10, color='red', linestyle='--', linewidth=1.5, label=f'P10: {p10:.2f}')
+    if not np.isnan(q2):
+        ax.axvline(x=q2, color='blue', linestyle='-.', linewidth=1.5, label=f'Q2: {q2:.2f}')
+    if not np.isnan(k3):
+        ax.axvline(x=k3, color='green', linestyle=':', linewidth=1.5, label=f'K3: {k3:.2f}')
+    if not np.isnan(d8):
+        ax.axvline(x=d8, color='orange', linestyle='--', linewidth=1.5, label=f'D8: {d8:.2f}')
+    ax.set_title('Histograma con Medidas de Posición (Percentiles, Cuartiles, Quintiles, Deciles)')
+    ax.set_xlabel('Valor')
+    ax.set_ylabel('Frecuencia')
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # Box Plot
+    # Q1, Q3, mediana y media para el box plot
+    q1_boxplot = np.percentile(datos, 25)
+    q3_boxplot = np.percentile(datos, 75)
+    median_boxplot = np.percentile(datos, 50)
+    mean_boxplot = np.mean(datos)
+
+    print(f"\nQ1 (Box Plot): {q1_boxplot:.2f}")
+    print(f"Q3 (Box Plot): {q3_boxplot:.2f}")
+    print(f"Mediana (Box Plot): {median_boxplot:.2f}")
+    print(f"Media (Box Plot): {mean_boxplot:.2f}")
+
+    plt.figure(figsize=(8, 6))
+    plt.boxplot(datos, vert=False, patch_artist=True, boxprops=dict(facecolor=bar_color))
+    
+    plt.plot(mean_boxplot, 1, marker='o', markersize=8, color='red', label=f'Media: {mean_boxplot:.2f}')
+    plt.axvline(x=mean_boxplot, color='red', linestyle='--', linewidth=1, label='_nolegend_') 
+    plt.title('Box Plot de los Datos')
+    plt.xlabel('Valores')
+    plt.yticks([1], ['Datos'])
+    plt.grid(axis='x', linestyle='--', alpha=0.7)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
     return tabla_frecuencias
 
